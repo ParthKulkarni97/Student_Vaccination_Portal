@@ -7,26 +7,22 @@ import jakarta.persistence.PreUpdate;
 import lombok.*;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// model/Student.java
-@Document(collection = "students")
+// Student.java
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
-public class Student extends BaseEntity {
-    private String name;
+@Document(collection = "students")
+public class Student {
+    @Id
+    private String id;
     private String studentId;
+    private String name;
     private String className;
-    private String dateOfBirth;
-    private String gender;
-    private String bloodGroup;
-    private String parentName;
-    private String contactNumber;
-    private String address;
-    private List<VaccinationRecord> vaccinations;
-    private boolean isActive;
+    private String section;
+    private LocalDate dateOfBirth;
+    private List<Vaccination> vaccinations;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

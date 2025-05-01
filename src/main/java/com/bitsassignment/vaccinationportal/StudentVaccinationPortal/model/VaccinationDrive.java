@@ -2,27 +2,24 @@ package com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model;
 
 import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model.enums.DriveStatus;
 import lombok.*;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
-// model/VaccinationDrive.java
-@Document(collection = "vaccination_drives")
+// VaccinationDrive.java
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
-public class VaccinationDrive extends BaseEntity {
+@Document(collection = "vaccination_drives")
+public class VaccinationDrive {
+    @Id
+    private String id;
     private String vaccineName;
     private LocalDate driveDate;
-    private int availableDoses;
-    private int administeredDoses;
+    private Integer availableDoses;
     private List<String> applicableClasses;
-    private DriveStatus status;
-    private String venue;
-    private String description;
-    private LocalTime startTime;
-    private LocalTime endTime;
+    private String status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

@@ -2,20 +2,20 @@ package com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model;
 
 import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model.enums.UserRole;
 import lombok.*;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-// model/User.java
-@Document(collection = "users")
+import java.time.LocalDateTime;
+
+// User.java
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
-public class User extends BaseEntity {
+@Document(collection = "users")
+public class User {
+    @Id
+    private String id;
     private String username;
     private String password;
-    private String email;
-    private String fullName;
-    private UserRole role;
-    private boolean isActive;
+    private String role;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

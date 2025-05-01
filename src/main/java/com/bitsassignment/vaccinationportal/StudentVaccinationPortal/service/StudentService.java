@@ -1,18 +1,18 @@
 package com.bitsassignment.vaccinationportal.StudentVaccinationPortal.service;
 
-import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.dto.request.StudentRequest;
-import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.dto.request.VaccinationRecordRequest;
-import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.dto.response.StudentResponse;
-import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.mapper.StudentMapper;
+
 import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model.Student;
 import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model.VaccinationDrive;
-import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model.VaccinationRecord;
+import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model.Vaccination;
 import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.repository.StudentRepository;
-import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.repository.VaccinationDriveRepository;
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
+import com.opencsv.exceptions.CsvValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.repository.Query;
@@ -22,122 +22,104 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-// service/StudentService.java
+// StudentService.java
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class StudentService {
-    private final StudentRepository studentRepository;
-    private final StudentMapper studentMapper;
-    private final VaccinationDriveService driveService;
+    @Autowired
+    private StudentRepository studentRepository;
 
-    public StudentResponse createStudent(StudentRequest request) {
-        log.info("Creating new student with ID: {}", request.getStudentId());
-
-        if (studentRepository.existsByStudentId(request.getStudentId())) {
-            throw new DuplicateResourceException("Student ID already exists");
+    public Page<Student> getAllStudents(String searchTerm, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        if (searchTerm != null && !searchTerm.isEmpty()) {
+            return (Page<Student>) studentRepository.findByNameContainingIgnoreCase(searchTerm, pageable);
         }
-
-        Student student = studentMapper.toEntity(request);
-        student.setVaccinations(new ArrayList<>());
-        student.setActive(true);
-
-        Student savedStudent = studentRepository.save(student);
-        return studentMapper.toResponse(savedStudent);
+        return studentRepository.findAll(pageable);
     }
 
-    public List<StudentResponse> bulkImportStudents(MultipartFile file) {
-        log.info("Processing bulk student import");
+    public Student createStudent(Student student) {
+        student.setCreatedAt(LocalDateTime.now());
+        student.setUpdatedAt(LocalDateTime.now());
+        return studentRepository.save(student);
+    }
 
-        try {
-            List<StudentRequest> requests = CSVHelper.parseCsv(file.getInputStream(), StudentRequest.class);
-            List<Student> students = new ArrayList<>();
+    public List<Student> bulkUpload(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty");
+        }
 
-            for (StudentRequest request : requests) {
-                if (!studentRepository.existsByStudentId(request.getStudentId())) {
-                    Student student = studentMapper.toEntity(request);
-                    student.setVaccinations(new ArrayList<>());
-                    student.setActive(true);
-                    students.add(student);
-                }
+        // Verify file type
+        if (!Objects.equals(file.getContentType(), "text/csv")) {
+            throw new IllegalArgumentException("Please upload a CSV file");
+        }
+
+        List<Student> students = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()));
+             CSVReader csvReader = new CSVReader(reader)) {
+
+            // Skip the header row
+            String[] headers = csvReader.readNext();
+            if (headers == null) {
+                throw new IllegalArgumentException("CSV file is empty");
             }
 
-            List<Student> savedStudents = studentRepository.saveAll(students);
-            return studentMapper.toResponseList(savedStudents);
+            // Read data rows
+            String[] line;
+            while ((line = csvReader.readNext()) != null) {
+                Student student = parseStudentFromCSV(line);
+                students.add(student);
+            }
+
+            return studentRepository.saveAll(students);
+
         } catch (IOException e) {
-            throw new FileProcessingException("Failed to process CSV file", e);
+            log.error("Failed to read CSV file", e);
+            throw new RuntimeException("Failed to read CSV file: " + e.getMessage());
+        } catch (CsvException e) {
+            log.error("Failed to parse CSV file", e);
+            throw new RuntimeException("Failed to parse CSV file: " + e.getMessage());
         }
     }
 
-    public StudentResponse updateVaccinationStatus(String studentId, VaccinationRecordRequest request) {
-        log.info("Updating vaccination status for student: {}", studentId);
+    private Student parseStudentFromCSV(String[] line) {
+        try {
+            Student student = new Student();
 
-        Student student = studentRepository.findByStudentId(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+            // Assuming CSV columns are in order: studentId,name,className,section,dateOfBirth
+            student.setStudentId(line[0].trim());
+            student.setName(line[1].trim());
+            student.setClassName(line[2].trim());
+            student.setSection(line[3].trim());
 
-        VaccinationDrive drive = driveService.getDriveById(request.getDriveId());
+            // Parse date of birth
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            student.setDateOfBirth(LocalDate.parse(line[4].trim(), formatter));
 
-        // Validate if student already has this vaccination
-        if (student.getVaccinations().stream()
-                .anyMatch(v -> v.getVaccineName().equals(drive.getVaccineName()))) {
-            throw new DuplicateVaccinationException("Student already has this vaccination");
+            // Initialize empty vaccination list
+            student.setVaccinations(new ArrayList<>());
+
+            // Set creation and update timestamps
+            LocalDateTime now = LocalDateTime.now();
+            student.setCreatedAt(now);
+            student.setUpdatedAt(now);
+
+            return student;
+        } catch (Exception e) {
+            log.error("Error parsing CSV line", e);
+            throw new RuntimeException("Error parsing CSV line: " + e.getMessage());
         }
-
-        VaccinationRecord record = VaccinationRecord.builder()
-                .driveId(drive.getId())
-                .vaccineName(drive.getVaccineName())
-                .vaccinationDate(LocalDate.now())
-                .batchNumber(request.getBatchNumber())
-                .administeredBy(SecurityContextHolder.getContext().getAuthentication().getName())
-                .notes(request.getNotes())
-                .build();
-
-        student.getVaccinations().add(record);
-        Student updatedStudent = studentRepository.save(student);
-
-        // Update drive administered doses
-        driveService.incrementAdministeredDoses(drive.getId());
-
-        return studentMapper.toResponse(updatedStudent);
     }
 
-    public Page<StudentResponse> searchStudents(StudentSearchCriteria criteria, Pageable pageable) {
-        log.info("Searching students with criteria: {}", criteria);
-
-        Query query = new Query().with(pageable);
-
-        if (StringUtils.hasText(criteria.getSearchTerm())) {
-            Criteria searchCriteria = new Criteria().orOperator(
-                    Criteria.where("name").regex(criteria.getSearchTerm(), "i"),
-                    Criteria.where("studentId").regex(criteria.getSearchTerm(), "i")
-            );
-            query.addCriteria(searchCriteria);
-        }
-
-        if (StringUtils.hasText(criteria.getClassName())) {
-            query.addCriteria(Criteria.where("className").is(criteria.getClassName()));
-        }
-
-        if (criteria.getVaccinationStatus() != null) {
-            if (criteria.getVaccinationStatus()) {
-                query.addCriteria(Criteria.where("vaccinations").ne(null).not().size(0));
-            } else {
-                query.addCriteria(new Criteria().orOperator(
-                        Criteria.where("vaccinations").is(null),
-                        Criteria.where("vaccinations").size(0)
-                ));
-            }
-        }
-
-        return PageableExecutionUtils.getPage(
-                mongoTemplate.find(query, Student.class),
-                pageable,
-                () -> mongoTemplate.count(query.skip(0).limit(0), Student.class)
-        ).map(studentMapper::toResponse);
-    }
+    // Other methods...
 }
