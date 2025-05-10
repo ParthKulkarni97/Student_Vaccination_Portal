@@ -1,6 +1,5 @@
 package com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model;
 
-import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.model.enums.UserRole;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;

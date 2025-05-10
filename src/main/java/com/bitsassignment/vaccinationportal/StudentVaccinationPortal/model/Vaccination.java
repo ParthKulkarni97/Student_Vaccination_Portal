@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
-// Vaccination.java
 @Data
 public class Vaccination {
     private String driveId;

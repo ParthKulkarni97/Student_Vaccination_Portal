@@ -11,7 +11,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// Student.java
 @Data
 @Document(collection = "students")
 public class Student {
@@ -23,6 +22,5 @@ public class Student {
     private String section;
     private LocalDate dateOfBirth;
     private List<Vaccination> vaccinations;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private boolean vaccinated;
 }
