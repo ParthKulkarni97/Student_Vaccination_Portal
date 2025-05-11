@@ -15,13 +15,22 @@ import java.util.List;
 public class VaccinationDriveController {
     private final VaccinationDriveService driveService;
 
+    @GetMapping
+    public ResponseEntity<List<VaccinationDrive>> getAllDrives() {
+        return ResponseEntity.ok(driveService.getAllDrives());
+    }
+
     @GetMapping("/upcoming")
     public ResponseEntity<List<VaccinationDrive>> getUpcomingDrives() {
         return ResponseEntity.ok(driveService.getUpcomingDrives());
     }
 
     @PostMapping
-    public ResponseEntity<VaccinationDrive> createDrive(@RequestBody VaccinationDrive drive) {
-        return ResponseEntity.ok(driveService.createDrive(drive));
+    public ResponseEntity<?> createDrive(@RequestBody VaccinationDrive drive) {
+        try {
+            return ResponseEntity.ok(driveService.createDrive(drive));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

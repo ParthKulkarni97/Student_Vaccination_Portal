@@ -14,7 +14,7 @@ public class VaccinationDrive {
     private String id;
     private String vaccineName;
     private LocalDate driveDate;
-    private Integer availableDoses;
-    private List<String> applicableClasses;
-    private String status;
+    private int availableDoses;
+    private String status; // UPCOMING, COMPLETED
+    private List<String> applicableClasses; // e.g., ["5", "6", "7"]
 }

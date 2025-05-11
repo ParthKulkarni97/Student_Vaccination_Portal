@@ -8,6 +8,7 @@ import com.bitsassignment.vaccinationportal.StudentVaccinationPortal.repository.
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,23 +35,21 @@ public class DashboardService {
             long vaccinatedStudents = studentRepository.countByVaccinated(true);
 
             // Get drives counts
-            long upcomingDrives = driveRepository.countByStatus("UPCOMING");
-            long completedDrives = driveRepository.countByStatus("COMPLETED");
+            long upcomingDrivesCount = driveRepository.countByStatus("UPCOMING");
+            long completedDrivesCount = driveRepository.countByStatus("COMPLETED");
 
-            // Get upcoming drives list
-            Date currentDate = new Date(); // Using java.util.Date instead of LocalDateTime
-            List<VaccinationDrive> upcomingDrivesList = driveRepository
-                    .findByDriveDateGreaterThanAndStatusOrderByDriveDate(currentDate, "UPCOMING");
+            LocalDate today = LocalDate.now();
+            List<VaccinationDrive> upcomingDrivesList = driveRepository.findByDriveDateAfterAndStatusOrderByDriveDate(today, "UPCOMING");
 
             List<UpcomingDrive> upcomingDrivesDTO = upcomingDrivesList.stream()
                     .map(this::convertToUpcomingDriveDTO)
                     .collect(Collectors.toList());
 
-            // Set all metrics
+// Set all metrics
             metrics.setTotalStudents(totalStudents);
             metrics.setVaccinatedStudents(vaccinatedStudents);
-            metrics.setUpcomingDrives(upcomingDrives);
-            metrics.setCompletedDrives(completedDrives);
+            metrics.setUpcomingDrives(upcomingDrivesCount);
+            metrics.setCompletedDrives(completedDrivesCount);
             metrics.setUpcomingDrivesList(upcomingDrivesDTO);
 
             return metrics;

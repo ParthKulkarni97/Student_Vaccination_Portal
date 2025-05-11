@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -21,6 +22,6 @@ public class Student {
     private String className;
     private String section;
     private LocalDate dateOfBirth;
-    private List<Vaccination> vaccinations;
     private boolean vaccinated;
+    private List<VaccinationRecord> vaccinations = new ArrayList<>();
 }
